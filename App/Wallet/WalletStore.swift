@@ -105,6 +105,22 @@ final class WalletStore: ObservableObject {
         if let deployed = try? await RPC.isContractDeployed(address) { isDeployed = deployed }
     }
 
+    private var balanceSettleTask: Task<Void, Never>?
+
+    /// After a send the transfer may not be mined yet, so the immediate balance read is stale.
+    /// Poll a few times so the UI settles to the new value without a manual refresh.
+    private func startBalanceSettle() {
+        balanceSettleTask?.cancel()
+        balanceSettleTask = Task { [weak self] in
+            for _ in 0..<6 {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                guard let self, !Task.isCancelled else { return }
+                await self.refreshBalance()
+                await self.refreshDeployment()
+            }
+        }
+    }
+
     // MARK: - Auth actions
 
     func sendCode() async {
@@ -156,6 +172,7 @@ final class WalletStore: ObservableObject {
                 : try await OpenfortClient.sendUSDCNormal(from: address, to: recipient, amount: amount)
             await refreshBalance()
             await refreshDeployment()
+            startBalanceSettle()
             return hash
         } catch {
             errorMessage = friendly(error)
