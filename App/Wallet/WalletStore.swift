@@ -146,12 +146,14 @@ final class WalletStore: ObservableObject {
         catch { errorMessage = friendly(error); return nil }
     }
 
-    func send(to recipient: String, amount: Decimal) async -> String? {
+    func send(to recipient: String, amount: Decimal, sponsored: Bool) async -> String? {
         guard let address else { return nil }
         busy = true
         defer { busy = false }
         do {
-            let hash = try await OpenfortClient.sendUSDC(from: address, to: recipient, amount: amount)
+            let hash = sponsored
+                ? try await OpenfortClient.sendUSDC(from: address, to: recipient, amount: amount)
+                : try await OpenfortClient.sendUSDCNormal(from: address, to: recipient, amount: amount)
             await refreshBalance()
             await refreshDeployment()
             return hash

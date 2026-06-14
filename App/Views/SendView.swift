@@ -9,6 +9,7 @@ struct SendView: View {
     @State private var recipient = ""
     @State private var amountText: String
     @State private var txHash: String?
+    @State private var sponsored = true
 
     init(presetAmount: Decimal) {
         self.presetAmount = presetAmount
@@ -35,12 +36,22 @@ struct SendView: View {
         VStack(spacing: 22) {
             amountField
             recipientField
+            Picker("Gas", selection: $sponsored) {
+                Text("Gasless (7702)").tag(true)
+                Text("Pay own gas").tag(false)
+            }
+            .pickerStyle(.segmented)
             Spacer()
-            Label("Gasless via EIP-7702 — sponsored, no ETH needed", systemImage: "bolt.fill")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.greenDark)
+            Label(
+                sponsored
+                    ? "Gasless via EIP-7702 — sponsored, no ETH needed"
+                    : "Normal transaction — your wallet pays gas (needs ETH)",
+                systemImage: sponsored ? "bolt.fill" : "fuelpump.fill"
+            )
+            .font(.system(size: 13, weight: .medium, design: .rounded))
+            .foregroundStyle(sponsored ? Theme.greenDark : Theme.subtle)
             Button {
-                Task { txHash = await wallet.send(to: recipient, amount: amount) }
+                Task { txHash = await wallet.send(to: recipient, amount: amount, sponsored: sponsored) }
             } label: {
                 Text(wallet.busy ? "Sending…" : "Pay \(formatUSD(amount))")
             }
@@ -101,9 +112,12 @@ struct SendView: View {
                 .font(.system(size: 64)).foregroundStyle(Theme.green)
             Text("Sent \(formatUSD(amount))")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-            Label("Gasless · EIP-7702 sponsored", systemImage: "bolt.fill")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.greenDark)
+            Label(
+                sponsored ? "Gasless · EIP-7702 sponsored" : "Normal · wallet paid gas",
+                systemImage: sponsored ? "bolt.fill" : "fuelpump.fill"
+            )
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundStyle(sponsored ? Theme.greenDark : Theme.subtle)
             Link("View on BaseScan", destination: explorerURL(hash))
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.greenDark)
