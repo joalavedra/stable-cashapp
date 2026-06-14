@@ -14,6 +14,7 @@ final class WalletStore: ObservableObject {
     @Published private(set) var balance: Decimal = 0
     @Published private(set) var accountType: String?
     @Published private(set) var isDeployed = false
+    @Published private(set) var activeChainId: Int?
     @Published private(set) var balanceLoading = false
     @Published var busy = false
     @Published var otpRequested = false
@@ -91,6 +92,7 @@ final class WalletStore: ObservableObject {
         userEmail = await OpenfortClient.currentEmail()
         await refreshBalance()
         await refreshDeployment()
+        await loadActiveChain()
     }
 
     private func apply(account: OFEmbeddedAccount?) {
@@ -146,6 +148,7 @@ final class WalletStore: ObservableObject {
         address = nil
         userEmail = nil
         balance = 0
+        activeChainId = nil
     }
 
     // MARK: - Money
@@ -160,6 +163,19 @@ final class WalletStore: ObservableObject {
     func exportPrivateKey() async -> String? {
         do { return try await OpenfortClient.exportPrivateKey() }
         catch { errorMessage = friendly(error); return nil }
+    }
+
+    // MARK: - Network
+
+    func loadActiveChain() async {
+        activeChainId = try? await OpenfortClient.currentChainId()
+    }
+
+    /// Switches the embedded wallet's active chain (validates `wallet_switchEthereumChain`).
+    func switchNetwork(to chain: Chain) async {
+        await run {
+            activeChainId = try await OpenfortClient.switchChain(toHex: chain.hex) ?? chain.id
+        }
     }
 
     func send(to recipient: String, amount: Decimal, sponsored: Bool) async -> String? {
