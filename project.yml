@@ -1,0 +1,47 @@
+name: OpenfortCash
+options:
+  bundleIdPrefix: io.openfort
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  # Fork of the Openfort Swift SDK with the DX fixes + native EIP-7702 send used by this app.
+  # PR: https://github.com/openfort-xyz/swift-sdk/pull/13
+  OpenfortSwift:
+    url: https://github.com/joalavedra/swift-sdk.git
+    branch: dx/friction-fixes
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Ad-hoc sign for the simulator so the app gets keychain access (the SDK needs it for its
+    # storage probe; unsigned = errSecMissingEntitlement -34018). See FRICTION_LOG #14.
+    CODE_SIGNING_ALLOWED: "YES"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  OpenfortCash:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.openfort.cashdemo
+        CODE_SIGN_ENTITLEMENTS: App/OpenfortCash.entitlements
+        GENERATE_INFOPLIST_FILE: "YES"
+        INFOPLIST_KEY_CFBundleDisplayName: Cash
+        INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - package: OpenfortSwift
+        product: OpenfortSwift
