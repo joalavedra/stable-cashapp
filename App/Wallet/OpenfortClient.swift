@@ -94,4 +94,27 @@ enum OpenfortClient {
             policy: gasPolicy
         )
     }
+
+    /// Sends USDC as a **normal, non-sponsored** transaction through the EIP-1193 provider with no
+    /// gas policy — the wallet's EOA pays its own gas (requires Base Sepolia ETH). Returns the hash.
+    static func sendUSDCNormal(from: String, to: String, amount: Decimal) async throws -> String {
+        let provider = try await OFSDK.shared.getEthereumProvider(params: OFGetEthereumProviderParams())
+        guard let provider else { throw ClientError(message: "No Ethereum provider.") }
+        // A chain-agnostic EOA with no stored chainId defaults to Base mainnet, so switch it to
+        // Base Sepolia before sending.
+        _ = try await provider.request(
+            method: "wallet_switchEthereumChain",
+            params: [["chainId": EVM.chainHex]]
+        )
+        let tx: [String: String] = [
+            "from": from,
+            "to": EVM.usdc,
+            "value": "0x0",
+            "data": EVM.transferCalldata(to: to, amountBaseUnits: EVM.toBaseUnits(amount)),
+        ]
+        guard let hash = try await provider.request(method: "eth_sendTransaction", params: [tx]) else {
+            throw ClientError(message: "Transaction returned no hash.")
+        }
+        return hash
+    }
 }

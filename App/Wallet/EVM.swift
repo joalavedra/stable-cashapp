@@ -73,20 +73,39 @@ enum RPC {
     private static let transferTopic =
         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
-    /// Recent USDC transfers (sent + received) for `address` via `eth_getLogs`. Bounded to a
-    /// recent block window to stay within public-RPC limits.
+    /// Recent USDC transfers (sent + received) for `address` via `eth_getLogs`, scanned in
+    /// 2000-block chunks (the public RPC's hard `eth_getLogs` range limit) over a recent window.
     static func usdcTransfers(of address: String) async throws -> [USDCTransfer] {
         let latest = try await blockNumber()
-        let fromBlock = "0x" + String(max(0, latest - 9_000), radix: 16)
+        let owner = address.lowercased()
         let topic = topicAddress(address)
-        let sent = (try? await getLogs(topics: [transferTopic, topic], fromBlock: fromBlock)) ?? []
-        let received = (try? await getLogs(topics: [transferTopic, nil, topic], fromBlock: fromBlock)) ?? []
+        let chunk = 2_000   // public Base Sepolia RPC caps eth_getLogs at 2000 blocks
+        let chunks = 12     // ~24k blocks (~13h)
+
+        var result: [USDCTransfer] = []
+        var toBlock = latest
+        for _ in 0..<chunks {
+            let fromBlock = max(0, toBlock - chunk)
+            let fromHex = "0x" + String(fromBlock, radix: 16)
+            let toHex = "0x" + String(toBlock, radix: 16)
+            async let sent = transfersIn(topics: [transferTopic, topic], from: fromHex, to: toHex, owner: owner)
+            async let received = transfersIn(topics: [transferTopic, nil, topic], from: fromHex, to: toHex, owner: owner)
+            result += (await sent) + (await received)
+            if fromBlock == 0 { break }
+            toBlock = fromBlock - 1
+        }
 
         var seen = Set<String>()
-        return (sent + received)
-            .compactMap { USDCTransfer(log: $0, owner: address.lowercased()) }
+        return result
             .filter { seen.insert($0.id).inserted }
             .sorted { $0.blockNumber > $1.blockNumber }
+    }
+
+    private static func transfersIn(
+        topics: [String?], from: String, to: String, owner: String
+    ) async -> [USDCTransfer] {
+        let logs = (try? await getLogs(topics: topics, from: from, to: to)) ?? []
+        return logs.compactMap { USDCTransfer(log: $0, owner: owner) }
     }
 
     private static func blockNumber() async throws -> Int {
@@ -94,12 +113,12 @@ enum RPC {
         return Int(hex.dropFirst(2), radix: 16) ?? 0
     }
 
-    private static func getLogs(topics: [String?], fromBlock: String) async throws -> [[String: Any]] {
+    private static func getLogs(topics: [String?], from: String, to: String) async throws -> [[String: Any]] {
         let jsTopics: [Any] = topics.map { $0 as Any? ?? NSNull() }
         let filter: [String: Any] = [
             "address": EVM.usdc,
-            "fromBlock": fromBlock,
-            "toBlock": "latest",
+            "fromBlock": from,
+            "toBlock": to,
             "topics": jsTopics,
         ]
         let result = try await rawResult(method: "eth_getLogs", params: [filter])
@@ -143,7 +162,7 @@ enum RPC {
 }
 
 /// A single USDC transfer parsed from a `Transfer` event log.
-struct USDCTransfer: Identifiable {
+struct USDCTransfer: Identifiable, Sendable {
     let id: String
     let hash: String
     let counterparty: String
