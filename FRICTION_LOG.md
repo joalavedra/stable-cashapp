@@ -17,7 +17,7 @@ Severity legend: 🔴 blocker · 🟠 major · 🟡 minor · 🔵 doc/papercut
 | # | Severity | Area | One-line |
 |---|----------|------|----------|
 | 16 | 🔴 | Provider | **Every transaction fails.** Two bugs: (a) `send` passes an async-IIFE **Promise to `evaluateJavaScript`** → `WKError 5`; (b) it calls **`window.openfort.getEthereumProvider`**, which doesn't exist — the method is on `window.openfort.embeddedWalletInstance` (what the SDK's own bridge uses) → "provider not available". |
-| 17 | ✅ | 7702 | Stock Swift can't do 7702 (no `signAuthorization`) → `AA24`. **Fixed in fork**: bundled `viem` + `OFSDK.shared.sendDelegatedTransaction(...)`, signing the authorization **natively via the embedded signer (no key export)**, chain-parameterized. Pending on-chain verification. |
+| 17 | ✅ | 7702 | A Calibur `.delegatedAccount` gasless send via the provider reverted `AA24` — the vendored `openfort.js` was frozen at **v1.1.5**, predating openfort-js #289 (which signs the first-send 7702 authorization in `sendCallsSync`). **Fixed by upgrading the bundle to 1.3.7**: `provider.request("eth_sendTransaction", policy)` on a CaliburV9 account now works natively, and the 782KB viem workaround was deleted. |
 | 14 | 🔴 | Errors | `requestEmailOtp` fails with opaque `INVALID_CONFIGURATION` that is really a **swallowed keychain error** (`errSecMissingEntitlement -34018`). Took source-diving + a keychain probe to find. The #1 DX failure. |
 | 15 | 🟠 | Setup | Embedded wallet needs the app's **bundle id whitelisted in the dashboard** (Security → app client). Not in the SDK README; only surfaces as an iframe timeout *after* you've built and logged in. (The error message itself is good.) |
 | 1 | 🔴 | Config | Shipped sample `OFConfig.plist` is missing the required `debug` key → SDK silently boots unconfigured |
@@ -110,27 +110,30 @@ bundler + paymaster (confirmed by an on-chain `AA24` response, see #17).
 
 ---
 
-## 17. 🟠 EIP-7702 delegated accounts can't transact from the Swift SDK
+## 17. ✅ EIP-7702 delegated-account gasless send — stale bundled openfort.js (fixed)
 
-`configure(accountType: .delegatedAccount)` succeeds, but sending fails on-chain with
-`UserOperation reverted with reason: AA24 signature error`. Per the docs, a Delegated Account's
-**first** transaction on a chain must include a **one-time EIP-7702 authorization**
-(signed via React's `use7702Authorization`). The Swift SDK has no equivalent, and the bundled
-`openfort.js` (openfort-js v1.1.5) contains **no `signAuthorization` / 7702 API at all** (grep:
-zero hits). So the userop is submitted without the authorization → the EOA isn't delegated →
-`validateUserOp` fails → AA24.
+`configure(accountType: .delegatedAccount)` returns a genuine CaliburV9 account
+(`implementationType: "CaliburV9"`, `address == ownerAddress`), but a sponsored
+`provider.request("eth_sendTransaction", policy)` from it reverted on-chain with
+`UserOperation reverted with reason: AA24 signature error`. A delegated EOA's **first** send must
+carry a **one-time EIP-7702 authorization**; without it the EOA isn't delegated, so `validateUserOp`
+runs against bytecode-less code and fails.
 
-This means **true 7702 is not achievable on the current Swift SDK**, for either path:
-- The "automatic" path (`DELEGATED_ACCOUNT` + provider `eth_sendTransaction`) never signs the authorization.
-- The "manual" path (React's `use7702Authorization` + viem bundler) has no Swift counterpart.
+**Root cause:** the SDK vendored `openfort.js` frozen at **sdkVersion 1.1.5**, which predates
+openfort-js [#289](https://github.com/openfort-xyz/openfort-js/pull/289). In ≥1.3.2, the provider's
+`eth_sendTransaction` for a non-EOA routes through `sendCallsSync`, which detects an undelegated
+delegated account and **signs + attaches the 7702 authorization** (`utils/authorization.ts` +
+`wallets/evm/delegation.ts`) via the same embedded signer. The other SDKs (react, react-native)
+were never affected — they consume openfort-js live from npm; only Swift vendors a frozen copy.
 
-**Fix (SDK enhancement, not a quick patch):** ship a 7702-capable `openfort.js` bundle, add a Swift
-`signAuthorization` / `use7702Authorization` equivalent, and thread the authorization into the
-delegated-account send.
+**Fix:** regenerate the vendored bundle from **openfort-js 1.3.7** (see
+`swift-sdk/js-src/openfort-entry.js`). A Calibur gasless send through the standard provider then
+works natively — verified on-chain Base Sepolia. The earlier workaround (a 782KB bundled `viem` +
+`OFSDK.shared.sendDelegatedTransaction(...)` signing the authorization against viem's
+`Simple7702Account`) was deleted; net SDK JS payload shrank ~390KB.
 
-**Workaround used in the demo:** `accountType: .smartAccount` (ERC-4337). Smart accounts get the
-same gasless, sponsored UX through the embedded provider with no authorization step — verified the
-paymaster accepts the policy (the AA24 above is a *signature* error, not a policy rejection).
+This turned out to be the highest-leverage finding of the dogfood: the gap was a vendoring/version
+issue, not a missing capability — the fix benefits any Swift app and removes a large dependency.
 
 ---
 

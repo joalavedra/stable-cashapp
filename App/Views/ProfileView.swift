@@ -16,7 +16,14 @@ struct ProfileView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 header
-                rows
+                VStack(spacing: 10) {
+                    rows
+                    Text("Switching changes the active chain (validates wallet_switchEthereumChain). The demo's USDC and gas policy are set up for Base Sepolia — switch back there before sending.")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Theme.subtle)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
                 Spacer()
                 footerButtons
             }
@@ -54,10 +61,30 @@ struct ProfileView: View {
             Divider()
             row(title: "Gas", value: "Sponsored")
             Divider()
-            row(title: "Network", value: "Base Sepolia")
+            Menu {
+                ForEach(Chain.supported) { chain in
+                    Button {
+                        Task { await wallet.switchNetwork(to: chain) }
+                    } label: {
+                        if wallet.activeChainId == chain.id {
+                            Label(chain.name, systemImage: "checkmark")
+                        } else {
+                            Text(chain.name)
+                        }
+                    }
+                }
+            } label: {
+                row(title: "Network", value: activeChainName, chevron: "chevron.up.chevron.down")
+            }
+            .disabled(wallet.busy)
         }
         .background(Theme.surface)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .task { await wallet.loadActiveChain() }
+    }
+
+    private var activeChainName: String {
+        Chain.named(wallet.activeChainId)?.name ?? "Base Sepolia"
     }
 
     private func row(title: String, value: String, chevron: String? = nil) -> some View {
