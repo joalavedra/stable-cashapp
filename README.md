@@ -50,3 +50,7 @@ xcodebuild build -project OpenfortCash.xcodeproj -scheme OpenfortCash \
 ## Notes
 
 This is a **testnet demo**. `App/Resources/OFConfig.plist` contains *publishable* Openfort keys (client-safe, no secrets). Not production-hardened — recovery is single-device and keys are bundled for convenience.
+
+## License
+
+[MIT](./LICENSE)
