@@ -1,7 +1,6 @@
 import Foundation
 
-/// Chain + token constants and the hand-rolled ERC-20 encoding the SDK doesn't provide.
-/// See FRICTION_LOG #7 — a payments SDK leaving balance/transfer to the app.
+/// Chain + token constants and minimal ERC-20 calldata encoding for USDC on Base Sepolia.
 enum EVM {
     static let chainId = 84532                                  // Base Sepolia
     static let chainHex = "0x14a34"
@@ -63,9 +62,8 @@ struct Chain: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Minimal JSON-RPC read path. Used for `eth_call balanceOf` because expressing a
-/// heterogeneous `eth_call` through the SDK provider's generic `RPCRequest` is awkward
-/// (FRICTION_LOG #6). Reads don't need the wallet, so a plain RPC call is simpler here.
+/// Minimal JSON-RPC read path for `eth_call balanceOf`. Balance reads don't need the wallet,
+/// so a plain RPC call against the public endpoint is simpler than going through the provider.
 enum RPC {
     struct CallError: LocalizedError { let message: String; var errorDescription: String? { message } }
 

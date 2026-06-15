@@ -2,9 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Grants keychain access. Without this, simulator/unsigned apps get errSecMissingEntitlement
-	     (-34018) on every SecItem call, which the SDK swallows and reports as INVALID_CONFIGURATION.
-	     See FRICTION_LOG #14. -->
+	<!-- Grants keychain access (the SDK stores session state in the Keychain). Without it,
+	     unsigned/simulator builds get errSecMissingEntitlement (-34018) on every SecItem call. -->
 	<key>keychain-access-groups</key>
 	<array>
 		<string>io.openfort.cashdemo</string>

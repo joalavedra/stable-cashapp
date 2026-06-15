@@ -2,8 +2,8 @@ import SwiftUI
 import OpenfortSwift
 
 /// App entry point. `OFSDK.setupSDK()` must run before any SwiftUI view tries to use the
-/// SDK, so it lives in the AppDelegate. Note that `setupSDK()` only *starts* the WebView
-/// bridge loading — readiness is awaited separately in `OpenfortClient`. See FRICTION_LOG #3.
+/// SDK, so it lives in the AppDelegate. `setupSDK()` only *starts* the WebView bridge
+/// loading — readiness is awaited separately in `OpenfortClient`.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,

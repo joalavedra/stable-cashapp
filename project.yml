@@ -7,19 +7,17 @@ options:
   groupSortPosition: top
 
 packages:
-  # Fork of the Openfort Swift SDK with the DX fixes + native EIP-7702 send used by this app.
-  # PR: https://github.com/openfort-xyz/swift-sdk/pull/13
   OpenfortSwift:
-    url: https://github.com/joalavedra/swift-sdk.git
-    branch: dx/friction-fixes
+    url: https://github.com/openfort-xyz/swift-sdk.git
+    exactVersion: 2.0.0
 
 settings:
   base:
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
-    # Ad-hoc sign for the simulator so the app gets keychain access (the SDK needs it for its
-    # storage probe; unsigned = errSecMissingEntitlement -34018). See FRICTION_LOG #14.
+    # Ad-hoc sign for the simulator so the app gets keychain access (the SDK stores session
+    # state in the Keychain; an unsigned build returns errSecMissingEntitlement -34018).
     CODE_SIGNING_ALLOWED: "YES"
     CODE_SIGNING_REQUIRED: "NO"
     CODE_SIGN_IDENTITY: "-"

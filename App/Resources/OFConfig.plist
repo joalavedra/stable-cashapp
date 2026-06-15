@@ -7,7 +7,7 @@
 	<string>pk_test_a315c7dc-24fd-53a2-be34-6c7b79c5f2cd</string>
 	<key>shieldPublishableKey</key>
 	<string>bc86c9c3-3496-4cba-a400-76a9aef14953</string>
-	<!-- Required by OFConfig's decoder (non-optional Bool). Omitting it makes the SDK boot unconfigured. See FRICTION_LOG #1. -->
+	<!-- Optional: enables verbose SDK logging. -->
 	<key>debug</key>
 	<true/>
 </dict>

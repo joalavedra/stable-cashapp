@@ -61,8 +61,7 @@ final class WalletStore: ObservableObject {
 
     // MARK: - State machine
 
-    /// The SDK republishes the embedded state every second (polling Timer), so we act only on
-    /// actual transitions. See FRICTION_LOG #5.
+    /// React only to actual embedded-state transitions, ignoring duplicate republishes.
     private func onState(_ next: OFEmbeddedState?) {
         let changed = next != lastState
         lastState = next
