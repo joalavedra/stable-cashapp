@@ -1,9 +1,8 @@
 import Foundation
 import OpenfortSwift
 
-/// Thin async wrapper over `OFSDK`. Centralizes the two awkward bits of the SDK: waiting for
-/// the WebView bridge to be ready before any call (FRICTION_LOG #3), and bridging the
-/// callback-based EIP-1193 provider back into async/await (FRICTION_LOG #6).
+/// Thin async wrapper over `OFSDK`: gates calls on the WebView bridge being ready and exposes
+/// the auth, wallet, network, and send operations the app needs as plain `async` functions.
 @MainActor
 enum OpenfortClient {
     /// Base Sepolia gas-sponsorship policy (MAIN project), so sends are gasless.
@@ -13,8 +12,8 @@ enum OpenfortClient {
 
     // MARK: - Readiness
 
-    /// Blocks until the SDK's WebView bridge finishes loading `openfort.js`. The SDK has no
-    /// `await ready()` API, so we poll `isInitialized`.
+    /// Blocks until the SDK's WebView bridge finishes loading `openfort.js`, by polling
+    /// `isInitialized`.
     static func awaitReady(timeout: TimeInterval = 12) async throws {
         let start = Date()
         while !OFSDK.shared.isInitialized {

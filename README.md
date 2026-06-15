@@ -26,12 +26,12 @@ Payments use **EIP-7702**: the embedded EOA is delegated to a smart-account impl
 
 | Layer | What |
 |---|---|
-| `App/Wallet/OpenfortClient.swift` | Thin async wrapper over `OFSDK` — readiness gate, email OTP, `configure`, `sendDelegatedTransaction` |
+| `App/Wallet/OpenfortClient.swift` | Thin async wrapper over `OFSDK` — readiness gate, email OTP, wallet configure, gasless `sendUSDC` |
 | `App/Wallet/WalletStore.swift` | `ObservableObject` driven by the SDK's embedded-state events |
 | `App/Wallet/EVM.swift` | ERC-20 calldata + JSON-RPC reads (balance, code, transfer history) |
 | `App/Views/*` | The Cash App UI (home/number pad, send, receive, activity, profile) |
 
-Built on a fork of the Openfort Swift SDK that adds native EIP-7702 plus a batch of DX fixes — see the PR: **[openfort-xyz/swift-sdk#13](https://github.com/openfort-xyz/swift-sdk/pull/13)**. The full developer-experience journey is in [`FRICTION_LOG.md`](./FRICTION_LOG.md).
+Built on the [Openfort Swift SDK](https://github.com/openfort-xyz/swift-sdk) (v2.0.0), which provides native EIP-7702 gasless sends and dependency-free ERC-20 helpers.
 
 ## Build & run
 
